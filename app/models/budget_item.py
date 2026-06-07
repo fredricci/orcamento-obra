@@ -16,6 +16,13 @@ class Priority(str, enum.Enum):
     baixa = "baixa"
 
 
+class ItemStatus(str, enum.Enum):
+    ideia = "ideia"
+    orcado = "orcado"
+    contratado = "contratado"
+    concluido = "concluido"
+
+
 class BudgetItem(Base):
     """Item de orçamento previsto — múltiplos por grupo são normais."""
 
@@ -33,6 +40,12 @@ class BudgetItem(Base):
         nullable=False,
     )
     planned_value: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    status: Mapped[ItemStatus] = mapped_column(
+        Enum(ItemStatus, name="item_status_enum", create_constraint=False),
+        nullable=False,
+        default=ItemStatus.ideia,
+        server_default="ideia",
+    )
 
     group: Mapped["Group"] = relationship("Group", back_populates="budget_items")  # noqa: F821
 

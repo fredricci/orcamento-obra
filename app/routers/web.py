@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
-from app.models.budget_item import BudgetItem, Priority
+from app.models.budget_item import BudgetItem, ItemStatus, Priority
 from app.models.group import Group
 from app.models.transaction import Transaction, PaymentMethod, TransactionSource
 
@@ -286,6 +286,7 @@ async def _budget_items_context(
     db: AsyncSession,
     filter_group: str | None = None,
     filter_priority: str | None = None,
+    filter_status: str | None = None,
 ) -> dict:
     groups = await _get_all_groups(db, include_inactive=False)
     group_map = {g.id: g.name for g in groups}
@@ -295,6 +296,8 @@ async def _budget_items_context(
         stmt = stmt.where(BudgetItem.group_id == uuid.UUID(filter_group))
     if filter_priority:
         stmt = stmt.where(BudgetItem.priority == filter_priority)
+    if filter_status:
+        stmt = stmt.where(BudgetItem.status == filter_status)
     stmt = stmt.order_by(Group.sort_order.nullslast(), Group.name, BudgetItem.created_at)
     rows = list((await db.execute(stmt)).scalars().all())
 
@@ -308,6 +311,7 @@ async def _budget_items_context(
             "supplier": r.supplier,
             "description": r.description,
             "priority": r.priority.value if r.priority else "",
+            "status": r.status.value if r.status else "ideia",
             "planned_value": str(r.planned_value),
             "planned_value_fmt": _fmt(r.planned_value),
         })
@@ -317,6 +321,7 @@ async def _budget_items_context(
         "total": _fmt(total),
         "filter_group": filter_group or "",
         "filter_priority": filter_priority or "",
+        "filter_status": filter_status or "",
     }
 
 
@@ -325,10 +330,11 @@ async def previsto_page(
     request: Request,
     group_id: str | None = Query(None),
     priority: str | None = Query(None),
+    status: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     _check_auth(request)
-    ctx = await _budget_items_context(db, group_id, priority)
+    ctx = await _budget_items_context(db, group_id, priority, status)
     return templates.TemplateResponse(request, "previsto.html", {
         "active_page": "previsto",
         **ctx,
@@ -343,6 +349,7 @@ async def create_budget_item_web(
     priority: str = Form(...),
     planned_value: float = Form(...),
     supplier: str | None = Form(None),
+    status: str = Form("ideia"),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     _check_auth(request)
@@ -352,6 +359,7 @@ async def create_budget_item_web(
         description=description or None,
         priority=Priority(priority),
         planned_value=planned_value,
+        status=ItemStatus(status),
     )
     db.add(item)
     await db.commit()
@@ -366,10 +374,11 @@ async def update_budget_item_web(
     request: Request,
     item_id: uuid.UUID,
     group_id: uuid.UUID = Form(...),
-    description: str = Form(...),
+    description: str | None = Form(None),
     priority: str = Form(...),
     planned_value: float = Form(...),
     supplier: str | None = Form(None),
+    status: str = Form("ideia"),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     _check_auth(request)
@@ -378,9 +387,10 @@ async def update_budget_item_web(
         raise HTTPException(status_code=404, detail="Item não encontrado")
     item.group_id = group_id
     item.supplier = supplier or None
-    item.description = description
+    item.description = description or None
     item.priority = Priority(priority)
     item.planned_value = planned_value
+    item.status = ItemStatus(status)
     await db.commit()
     ctx = await _budget_items_context(db)
     return templates.TemplateResponse(request, "partials/budget_items_rows.html", {

@@ -11,7 +11,7 @@
 </div>
 
 <!-- Filters -->
-<form class="bg-white rounded-lg shadow p-4 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="get" action="/previsto">
+<form class="bg-white rounded-lg shadow p-4 mb-6 grid grid-cols-2 md:grid-cols-4 gap-4" method="get" action="/previsto">
     <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Grupo</label>
         <select name="group_id" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
@@ -30,6 +30,16 @@
             <option value="baixa" {% if filter_priority == 'baixa' %}selected{% endif %}>Baixa</option>
         </select>
     </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+        <select name="status" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <option value="">Todos</option>
+            <option value="ideia" {% if filter_status == 'ideia' %}selected{% endif %}>💡 Ideia</option>
+            <option value="orcado" {% if filter_status == 'orcado' %}selected{% endif %}>📋 Orçado</option>
+            <option value="contratado" {% if filter_status == 'contratado' %}selected{% endif %}>✅ Contratado</option>
+            <option value="concluido" {% if filter_status == 'concluido' %}selected{% endif %}>✔️ Concluído</option>
+        </select>
+    </div>
     <div class="flex items-end">
         <button type="submit" class="bg-gray-600 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-700">Filtrar</button>
     </div>
@@ -40,7 +50,7 @@
     <form hx-post="/previsto" hx-target="#itemsBody" hx-swap="innerHTML" hx-on::after-request="if(event.detail.successful) this.reset()">
         <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div class="relative">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Grupo</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Grupo <span class="text-red-500">*</span></label>
                 <input type="hidden" name="group_id" id="addGroupId" required>
                 <input type="text" id="addGroupSearch" required autocomplete="off" placeholder="Digite para buscar..."
                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
@@ -55,19 +65,26 @@
                 <input type="text" name="description" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
             </div>
             <div class="relative">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Prioridade</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Prioridade <span class="text-red-500">*</span></label>
                 <input type="hidden" name="priority" id="addPriorityId" required>
                 <input type="text" id="addPrioritySearch" required autocomplete="off" placeholder="Digite..."
                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
                 <div id="addPriorityDropdown" class="hidden absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto mt-1"></div>
             </div>
+            <div class="relative">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status <span class="text-red-500">*</span></label>
+                <input type="hidden" name="status" id="addStatusId" required>
+                <input type="text" id="addStatusSearch" required autocomplete="off" placeholder="Digite..."
+                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                <div id="addStatusDropdown" class="hidden absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto mt-1"></div>
+            </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Valor (R$) <span class="text-red-500">*</span></label>
                 <input type="number" name="planned_value" step="0.01" min="0.01" required class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
             </div>
-            <div class="flex items-end">
-                <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700">Salvar</button>
-            </div>
+        </div>
+        <div class="mt-3">
+            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700">Salvar</button>
         </div>
     </form>
 </div>
@@ -80,6 +97,7 @@
                 <th class="text-left px-4 py-3 font-medium text-gray-600">Fornecedor</th>
                 <th class="text-left px-4 py-3 font-medium text-gray-600">Descrição</th>
                 <th class="text-center px-4 py-3 font-medium text-gray-600">Prioridade</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">Status</th>
                 <th class="text-right px-4 py-3 font-medium text-gray-600">Valor</th>
                 <th class="text-center px-4 py-3 font-medium text-gray-600">Ações</th>
             </tr>
@@ -89,7 +107,7 @@
         </tbody>
         <tfoot class="bg-gray-50 border-t font-semibold">
             <tr>
-                <td colspan="4" class="px-4 py-3 text-right">Total:</td>
+                <td colspan="5" class="px-4 py-3 text-right">Total:</td>
                 <td class="px-4 py-3 text-right">R$ {{ total }}</td>
                 <td></td>
             </tr>
@@ -105,6 +123,12 @@ const priorityOptions = [
     { value: "alta", label: "Alta" },
     { value: "media", label: "Média" },
     { value: "baixa", label: "Baixa" },
+];
+const statusOptions = [
+    { value: "ideia", label: "💡 Ideia" },
+    { value: "orcado", label: "📋 Orçado" },
+    { value: "contratado", label: "✅ Contratado" },
+    { value: "concluido", label: "✔️ Concluído" },
 ];
 
 function setupAutocomplete(inputId, dropdownId, options, hiddenId) {
@@ -123,7 +147,6 @@ function setupAutocomplete(inputId, dropdownId, options, hiddenId) {
             const div = document.createElement('div');
             div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-100';
             div.textContent = o.label;
-            div.dataset.index = i;
             div.onmousedown = (e) => { e.preventDefault(); select(i); };
             dd.appendChild(div);
         });
@@ -134,9 +157,8 @@ function setupAutocomplete(inputId, dropdownId, options, hiddenId) {
         dd.querySelectorAll('div').forEach(d => d.classList.remove('bg-blue-100'));
         if (idx >= 0 && idx < filtered.length) {
             activeIndex = idx;
-            const el = dd.children[idx];
-            el.classList.add('bg-blue-100');
-            el.scrollIntoView({ block: 'nearest' });
+            dd.children[idx].classList.add('bg-blue-100');
+            dd.children[idx].scrollIntoView({ block: 'nearest' });
         }
     }
 
@@ -152,23 +174,16 @@ function setupAutocomplete(inputId, dropdownId, options, hiddenId) {
     input.addEventListener('focus', render);
     input.addEventListener('keydown', (e) => {
         if (dd.classList.contains('hidden')) return;
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            highlight(activeIndex + 1 < filtered.length ? activeIndex + 1 : 0);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            highlight(activeIndex - 1 >= 0 ? activeIndex - 1 : filtered.length - 1);
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (activeIndex >= 0) select(activeIndex);
-        } else if (e.key === 'Escape') {
-            dd.classList.add('hidden');
-        }
+        if (e.key === 'ArrowDown') { e.preventDefault(); highlight(activeIndex + 1 < filtered.length ? activeIndex + 1 : 0); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); highlight(activeIndex - 1 >= 0 ? activeIndex - 1 : filtered.length - 1); }
+        else if (e.key === 'Enter') { e.preventDefault(); if (activeIndex >= 0) select(activeIndex); }
+        else if (e.key === 'Escape') { dd.classList.add('hidden'); }
     });
     input.addEventListener('blur', () => { setTimeout(() => dd.classList.add('hidden'), 150); });
 }
 
 setupAutocomplete('addGroupSearch', 'addGroupDropdown', groupOptions, 'addGroupId');
 setupAutocomplete('addPrioritySearch', 'addPriorityDropdown', priorityOptions, 'addPriorityId');
+setupAutocomplete('addStatusSearch', 'addStatusDropdown', statusOptions, 'addStatusId');
 </script>
 {% endblock %}
