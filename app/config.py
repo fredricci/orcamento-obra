@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     web_password: str = "admin"
     app_env: str = "development"
     log_level: str = "INFO"
+    app_base_url: str = "https://minhaobra.duckdns.org"
 
 
 settings = Settings()

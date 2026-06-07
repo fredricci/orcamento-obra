@@ -14,6 +14,7 @@ from app.routers.budget_items import router as budget_items_router
 from app.routers.transactions import router as transactions_router
 from app.routers.dashboard import router as dashboard_router
 from app.routers.web import router as web_router
+from app.routers.oauth import router as oauth_router
 from app.mcp.server import mcp
 
 logger = structlog.get_logger()
@@ -43,6 +44,7 @@ app.include_router(budget_items_router)
 app.include_router(transactions_router)
 app.include_router(dashboard_router)
 app.include_router(web_router)
+app.include_router(oauth_router)
 
 # MCP server montado em /mcp/v1
 mcp_app = mcp.http_app(path="/")
