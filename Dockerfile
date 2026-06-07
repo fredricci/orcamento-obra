@@ -1,6 +1,9 @@
 # ---- Stage 1: builder ----
 FROM python:3.12-slim AS builder
 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /build
 
 # Instala dependências de sistema necessárias para compilação
@@ -15,6 +18,9 @@ RUN pip install --upgrade pip && \
 
 # ---- Stage 2: runtime ----
 FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 

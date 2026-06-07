@@ -1,5 +1,7 @@
 # Orçamento de Obra
 
+[![CI](https://github.com/fredricci/orcamento-obra/actions/workflows/ci.yml/badge.svg)](https://github.com/fredricci/orcamento-obra/actions/workflows/ci.yml)
+
 App pessoal de controle de orçamento de reforma residencial. Permite cadastrar grupos de despesa, definir orçamento previsto por grupo, registrar lançamentos (manualmente ou via Claude.ai com foto/áudio/texto) e acompanhar previsto x realizado no dashboard.
 
 ## Arquitetura
@@ -478,11 +480,11 @@ O Caddy obtém o certificado TLS do Let's Encrypt automaticamente na primeira re
 
 No repositório GitHub, vá em **Settings → Secrets and variables → Actions** e adicione:
 
-| Secret | Valor |
-|--------|-------|
-| `SSH_HOST` | IP público do EC2 (ex: `54.X.X.X`) |
-| `SSH_USER` | `ubuntu` |
-| `SSH_PRIVATE_KEY` | Conteúdo do arquivo `.pem` da key pair |
+| Secret | Como obter |
+|--------|-----------|
+| `SSH_PRIVATE_KEY` | Chave privada do key pair usado no Terraform (conteúdo do arquivo `.pem`) |
+| `SSH_HOST` | IP do Elastic IP (output do `terraform apply`: `public_ip`) |
+| `SSH_USER` | `ubuntu` (usuário padrão do Ubuntu na AWS) |
 
 O `GITHUB_TOKEN` para push no GHCR é automático (não precisa configurar).
 
