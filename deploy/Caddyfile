@@ -1,0 +1,20 @@
+{$DOMAIN} {
+    # HTTPS automático via Let's Encrypt
+    reverse_proxy app:8000
+
+    # Cabeçalhos de segurança básicos
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    encode gzip
+
+    log {
+        output stdout
+        format json
+    }
+}

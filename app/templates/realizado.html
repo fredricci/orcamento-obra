@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Realizado — Orçamento de Obra{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Lançamentos Realizados</h1>
+    <button onclick="document.getElementById('addTxnForm').classList.toggle('hidden')"
+            class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700">
+        Lançamento Manual
+    </button>
+</div>
+
+<!-- Filters -->
+<form class="bg-white rounded-lg shadow p-4 mb-6 grid grid-cols-2 md:grid-cols-5 gap-4" method="get" action="/realizado">
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Grupo</label>
+        <select name="group_id" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <option value="">Todos</option>
+            {% for g in groups %}
+            <option value="{{ g.id }}" {% if filter_group == g.id|string %}selected{% endif %}>{{ g.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">De</label>
+        <input type="date" name="start_date" value="{{ filter_start or '' }}" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Até</label>
+        <input type="date" name="end_date" value="{{ filter_end or '' }}" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Origem</label>
+        <select name="source" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <option value="">Todas</option>
+            <option value="manual" {% if filter_source == 'manual' %}selected{% endif %}>Manual</option>
+            <option value="chat" {% if filter_source == 'chat' %}selected{% endif %}>Chat</option>
+        </select>
+    </div>
+    <div class="flex items-end">
+        <button type="submit" class="bg-gray-600 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-700">Filtrar</button>
+    </div>
+</form>
+
+<!-- Add form (modal-like) -->
+<div id="addTxnForm" class="hidden bg-white rounded-lg shadow p-4 mb-6">
+    <h3 class="font-semibold text-gray-700 mb-3">Novo Lançamento</h3>
+    <form hx-post="/realizado" hx-target="#txnBody" hx-swap="innerHTML" hx-on::after-request="if(event.detail.successful) this.reset()">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+            <div class="relative">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Grupo</label>
+                <input type="hidden" name="group_id" id="txnGroupId" required>
+                <input type="text" id="txnGroupSearch" required autocomplete="off" placeholder="Digite para buscar..."
+                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                <div id="txnGroupDropdown" class="hidden absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto mt-1"></div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                <input type="date" name="transaction_date" required class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                       value="{{ today }}">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Fornecedor</label>
+                <input type="text" name="supplier" maxlength="120" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                <input type="number" name="value" step="0.01" min="0.01" required class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                <input type="text" name="description" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pagamento</label>
+                <select name="payment_method" required class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <option value="pix">PIX</option>
+                    <option value="credito_avista">Crédito à Vista</option>
+                    <option value="credito_parcelado">Crédito Parcelado</option>
+                    <option value="debito">Débito</option>
+                    <option value="boleto">Boleto</option>
+                    <option value="transferencia">Transferência</option>
+                    <option value="dinheiro">Dinheiro</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Observação</label>
+                <input type="text" name="observation" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700">Salvar</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-x-auto">
+    <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 border-b">
+            <tr>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Data</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Grupo</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Fornecedor</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Descrição</th>
+                <th class="text-right px-4 py-3 font-medium text-gray-600">Valor</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">Pagamento</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">Origem</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">Ações</th>
+            </tr>
+        </thead>
+        <tbody id="txnBody" class="divide-y divide-gray-100">
+            {% include "partials/transactions_rows.html" %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if total_count > limit %}
+<div class="flex justify-center mt-4 space-x-2">
+    {% if offset > 0 %}
+    <a href="?offset={{ offset - limit }}{% if filter_group %}&group_id={{ filter_group }}{% endif %}{% if filter_start %}&start_date={{ filter_start }}{% endif %}{% if filter_end %}&end_date={{ filter_end }}{% endif %}{% if filter_source %}&source={{ filter_source }}{% endif %}"
+       class="px-3 py-2 bg-white rounded-md shadow text-sm text-gray-600 hover:bg-gray-50">Anterior</a>
+    {% endif %}
+    <span class="px-3 py-2 text-sm text-gray-500">{{ offset + 1 }}–{{ [offset + limit, total_count] | min }} de {{ total_count }}</span>
+    {% if offset + limit < total_count %}
+    <a href="?offset={{ offset + limit }}{% if filter_group %}&group_id={{ filter_group }}{% endif %}{% if filter_start %}&start_date={{ filter_start }}{% endif %}{% if filter_end %}&end_date={{ filter_end }}{% endif %}{% if filter_source %}&source={{ filter_source }}{% endif %}"
+       class="px-3 py-2 bg-white rounded-md shadow text-sm text-gray-600 hover:bg-gray-50">Próxima</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+const txnGroupOptions = [
+    {% for g in groups %}{ value: "{{ g.id }}", label: "{{ g.name }}" },{% endfor %}
+];
+
+function setupAutocomplete(inputId, dropdownId, options, hiddenId) {
+    const input = document.getElementById(inputId);
+    const dd = document.getElementById(dropdownId);
+    const hidden = document.getElementById(hiddenId);
+    let activeIndex = -1;
+    let filtered = [];
+
+    function render() {
+        dd.innerHTML = '';
+        activeIndex = -1;
+        const query = input.value.toLowerCase();
+        filtered = options.filter(o => o.label.toLowerCase().includes(query));
+        filtered.forEach((o, i) => {
+            const div = document.createElement('div');
+            div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-100';
+            div.textContent = o.label;
+            div.onmousedown = (e) => { e.preventDefault(); select(i); };
+            dd.appendChild(div);
+        });
+        dd.classList.toggle('hidden', filtered.length === 0);
+    }
+
+    function highlight(idx) {
+        dd.querySelectorAll('div').forEach(d => d.classList.remove('bg-blue-100'));
+        if (idx >= 0 && idx < filtered.length) {
+            activeIndex = idx;
+            const el = dd.children[idx];
+            el.classList.add('bg-blue-100');
+            el.scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    function select(idx) {
+        if (idx >= 0 && idx < filtered.length) {
+            input.value = filtered[idx].label;
+            hidden.value = filtered[idx].value;
+            dd.classList.add('hidden');
+        }
+    }
+
+    input.addEventListener('input', () => { hidden.value = ''; render(); });
+    input.addEventListener('focus', render);
+    input.addEventListener('keydown', (e) => {
+        if (dd.classList.contains('hidden')) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            highlight(activeIndex + 1 < filtered.length ? activeIndex + 1 : 0);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            highlight(activeIndex - 1 >= 0 ? activeIndex - 1 : filtered.length - 1);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeIndex >= 0) select(activeIndex);
+        } else if (e.key === 'Escape') {
+            dd.classList.add('hidden');
+        }
+    });
+    input.addEventListener('blur', () => { setTimeout(() => dd.classList.add('hidden'), 150); });
+}
+
+setupAutocomplete('txnGroupSearch', 'txnGroupDropdown', txnGroupOptions, 'txnGroupId');
+</script>
+{% endblock %}

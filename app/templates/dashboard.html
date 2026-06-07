@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Orçamento de Obra{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
+
+<!-- Summary cards -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-lg shadow p-4">
+        <p class="text-sm text-gray-500">Total Previsto</p>
+        <p class="text-xl font-bold text-gray-800">R$ {{ summary.total_planned }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+        <p class="text-sm text-gray-500">Total Realizado</p>
+        <p class="text-xl font-bold text-gray-800">R$ {{ summary.total_realized }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+        <p class="text-sm text-gray-500">Saldo</p>
+        <p class="text-xl font-bold {% if summary.balance_negative %}text-red-600{% else %}text-green-600{% endif %}">R$ {{ summary.balance }}</p>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+        <p class="text-sm text-gray-500">% Executado</p>
+        <p class="text-xl font-bold text-blue-600">{{ summary.percent_executed }}%</p>
+    </div>
+</div>
+
+<!-- Priority cards -->
+<h2 class="text-lg font-semibold text-gray-700 mb-3">Previsto por Prioridade</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    {% for p in priorities %}
+    <div class="bg-white rounded-lg shadow p-4 border-l-4 {% if p.priority == 'alta' %}border-red-500{% elif p.priority == 'media' %}border-yellow-500{% else %}border-green-500{% endif %}">
+        <p class="text-sm text-gray-500 uppercase">{{ p.priority }}</p>
+        <p class="text-xl font-bold text-gray-800">R$ {{ p.planned }}</p>
+        <p class="text-sm text-gray-400">{{ p.items_count }} ite{{ 'ns' if p.items_count != 1 else 'm' }}</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- By group table -->
+<h2 class="text-lg font-semibold text-gray-700 mb-3">Por Grupo</h2>
+<div class="bg-white rounded-lg shadow overflow-x-auto mb-8">
+    <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 border-b">
+            <tr>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Grupo</th>
+                <th class="text-right px-4 py-3 font-medium text-gray-600">Previsto</th>
+                <th class="text-right px-4 py-3 font-medium text-gray-600">Realizado</th>
+                <th class="text-right px-4 py-3 font-medium text-gray-600">Saldo</th>
+                <th class="text-right px-4 py-3 font-medium text-gray-600">%</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for g in groups %}
+            <tr>
+                <td class="px-4 py-2">{{ g.group_name }}</td>
+                <td class="px-4 py-2 text-right">R$ {{ g.planned }}</td>
+                <td class="px-4 py-2 text-right">R$ {{ g.realized }}</td>
+                <td class="px-4 py-2 text-right {% if g.is_over_budget %}text-red-600 font-semibold{% endif %}">R$ {{ g.balance }}</td>
+                <td class="px-4 py-2 text-right">{{ g.percent_display }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Chart -->
+<h2 class="text-lg font-semibold text-gray-700 mb-3">Previsto vs Realizado</h2>
+<div class="bg-white rounded-lg shadow p-4 mb-8">
+    <canvas id="chartGroups" height="400"></canvas>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const labels = {{ chart_labels | tojson }};
+const planned = {{ chart_planned | tojson }};
+const realized = {{ chart_realized | tojson }};
+
+new Chart(document.getElementById('chartGroups'), {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [
+            { label: 'Previsto', data: planned, backgroundColor: 'rgba(59,130,246,0.6)' },
+            { label: 'Realizado', data: realized, backgroundColor: 'rgba(249,115,22,0.6)' }
+        ]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { x: { beginAtZero: true } },
+        plugins: { legend: { position: 'top' } }
+    }
+});
+</script>
+{% endblock %}

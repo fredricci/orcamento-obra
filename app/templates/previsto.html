@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Previsto — Orçamento de Obra{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Orçamento Previsto</h1>
+    <button onclick="document.getElementById('addItemForm').classList.toggle('hidden')"
+            class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700">
+        Adicionar Item
+    </button>
+</div>
+
+<!-- Filters -->
+<form class="bg-white rounded-lg shadow p-4 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="get" action="/previsto">
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Grupo</label>
+        <select name="group_id" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <option value="">Todos</option>
+            {% for g in groups %}
+            <option value="{{ g.id }}" {% if filter_group == g.id|string %}selected{% endif %}>{{ g.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Prioridade</label>
+        <select name="priority" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <option value="">Todas</option>
+            <option value="alta" {% if filter_priority == 'alta' %}selected{% endif %}>Alta</option>
+            <option value="media" {% if filter_priority == 'media' %}selected{% endif %}>Média</option>
+            <option value="baixa" {% if filter_priority == 'baixa' %}selected{% endif %}>Baixa</option>
+        </select>
+    </div>
+    <div class="flex items-end">
+        <button type="submit" class="bg-gray-600 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-700">Filtrar</button>
+    </div>
+</form>
+
+<!-- Add form -->
+<div id="addItemForm" class="hidden bg-white rounded-lg shadow p-4 mb-6">
+    <form hx-post="/previsto" hx-target="#itemsBody" hx-swap="innerHTML" hx-on::after-request="if(event.detail.successful) this.reset()">
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div class="relative">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Grupo</label>
+                <input type="hidden" name="group_id" id="addGroupId" required>
+                <input type="text" id="addGroupSearch" required autocomplete="off" placeholder="Digite para buscar..."
+                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                <div id="addGroupDropdown" class="hidden absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto mt-1"></div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Fornecedor</label>
+                <input type="text" name="supplier" maxlength="120" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                <input type="text" name="description" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            </div>
+            <div class="relative">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Prioridade</label>
+                <input type="hidden" name="priority" id="addPriorityId" required>
+                <input type="text" id="addPrioritySearch" required autocomplete="off" placeholder="Digite..."
+                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                <div id="addPriorityDropdown" class="hidden absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto mt-1"></div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                <input type="number" name="planned_value" step="0.01" min="0.01" required class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700">Salvar</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-x-auto">
+    <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 border-b">
+            <tr>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Grupo</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Fornecedor</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">Descrição</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">Prioridade</th>
+                <th class="text-right px-4 py-3 font-medium text-gray-600">Valor</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">Ações</th>
+            </tr>
+        </thead>
+        <tbody id="itemsBody" class="divide-y divide-gray-100">
+            {% include "partials/budget_items_rows.html" %}
+        </tbody>
+        <tfoot class="bg-gray-50 border-t font-semibold">
+            <tr>
+                <td colspan="4" class="px-4 py-3 text-right">Total:</td>
+                <td class="px-4 py-3 text-right">R$ {{ total }}</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<script>
+const groupOptions = [
+    {% for g in groups %}{ value: "{{ g.id }}", label: "{{ g.name }}" },{% endfor %}
+];
+const priorityOptions = [
+    { value: "alta", label: "Alta" },
+    { value: "media", label: "Média" },
+    { value: "baixa", label: "Baixa" },
+];
+
+function setupAutocomplete(inputId, dropdownId, options, hiddenId) {
+    const input = document.getElementById(inputId);
+    const dd = document.getElementById(dropdownId);
+    const hidden = document.getElementById(hiddenId);
+    let activeIndex = -1;
+    let filtered = [];
+
+    function render() {
+        dd.innerHTML = '';
+        activeIndex = -1;
+        const query = input.value.toLowerCase();
+        filtered = options.filter(o => o.label.toLowerCase().includes(query));
+        filtered.forEach((o, i) => {
+            const div = document.createElement('div');
+            div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-100';
+            div.textContent = o.label;
+            div.dataset.index = i;
+            div.onmousedown = (e) => { e.preventDefault(); select(i); };
+            dd.appendChild(div);
+        });
+        dd.classList.toggle('hidden', filtered.length === 0);
+    }
+
+    function highlight(idx) {
+        dd.querySelectorAll('div').forEach(d => d.classList.remove('bg-blue-100'));
+        if (idx >= 0 && idx < filtered.length) {
+            activeIndex = idx;
+            const el = dd.children[idx];
+            el.classList.add('bg-blue-100');
+            el.scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    function select(idx) {
+        if (idx >= 0 && idx < filtered.length) {
+            input.value = filtered[idx].label;
+            hidden.value = filtered[idx].value;
+            dd.classList.add('hidden');
+        }
+    }
+
+    input.addEventListener('input', () => { hidden.value = ''; render(); });
+    input.addEventListener('focus', render);
+    input.addEventListener('keydown', (e) => {
+        if (dd.classList.contains('hidden')) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            highlight(activeIndex + 1 < filtered.length ? activeIndex + 1 : 0);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            highlight(activeIndex - 1 >= 0 ? activeIndex - 1 : filtered.length - 1);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeIndex >= 0) select(activeIndex);
+        } else if (e.key === 'Escape') {
+            dd.classList.add('hidden');
+        }
+    });
+    input.addEventListener('blur', () => { setTimeout(() => dd.classList.add('hidden'), 150); });
+}
+
+setupAutocomplete('addGroupSearch', 'addGroupDropdown', groupOptions, 'addGroupId');
+setupAutocomplete('addPrioritySearch', 'addPriorityDropdown', priorityOptions, 'addPriorityId');
+</script>
+{% endblock %}
