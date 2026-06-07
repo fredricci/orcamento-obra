@@ -28,114 +28,20 @@
 </tr>
 {% endfor %}
 
-<!-- Inline edit row -->
-<tr id="editItemRow" class="hidden bg-blue-50">
-    <td colspan="7" class="px-4 py-3">
-        <form id="editItemForm" hx-target="#itemsBody" hx-swap="innerHTML">
-            <div class="grid grid-cols-2 md:grid-cols-7 gap-3 items-end">
-                <select name="group_id" id="eiGroupId" required class="border border-gray-300 rounded-md px-3 py-2 text-sm">
-                    {% for g in groups %}
-                    <option value="{{ g.id }}">{{ g.name }}</option>
-                    {% endfor %}
-                </select>
-                <input type="text" name="supplier" id="eiSupplier" maxlength="120" placeholder="Fornecedor" class="border border-gray-300 rounded-md px-3 py-2 text-sm">
-                <input type="text" name="description" id="eiDescription" placeholder="Descrição" class="border border-gray-300 rounded-md px-3 py-2 text-sm">
-                <select name="priority" id="eiPriority" required class="border border-gray-300 rounded-md px-3 py-2 text-sm">
-                    <option value="alta">Alta</option>
-                    <option value="media">Média</option>
-                    <option value="baixa">Baixa</option>
-                </select>
-                <div class="relative">
-                    <input type="hidden" name="status" id="eiStatusId" required>
-                    <input type="text" id="eiStatusSearch" required autocomplete="off" placeholder="Status..."
-                           class="border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
-                    <div id="eiStatusDropdown" class="hidden absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto mt-1"></div>
-                </div>
-                <input type="number" name="planned_value" id="eiValue" step="0.01" min="0.01" required placeholder="Valor" class="border border-gray-300 rounded-md px-3 py-2 text-sm">
-                <div class="flex gap-2">
-                    <button type="submit" class="bg-blue-600 text-white px-3 py-2 rounded-md text-xs hover:bg-blue-700">Salvar</button>
-                    <button type="button" onclick="document.getElementById('editItemRow').classList.add('hidden')" class="text-gray-500 text-xs hover:underline">Cancelar</button>
-                </div>
-            </div>
-        </form>
-    </td>
-</tr>
-
 <script>
-const eiStatusOptions = [
-    { value: "ideia", label: "💡 Ideia" },
-    { value: "orcado", label: "📋 Orçado" },
-    { value: "contratado", label: "✅ Contratado" },
-    { value: "concluido", label: "✔️ Concluído" },
-];
-
-function setupAutocompleteEi(inputId, dropdownId, options, hiddenId) {
-    const input = document.getElementById(inputId);
-    const dd = document.getElementById(dropdownId);
-    const hidden = document.getElementById(hiddenId);
-    if (!input) return;
-    let activeIndex = -1;
-    let filtered = [];
-
-    function render() {
-        dd.innerHTML = '';
-        activeIndex = -1;
-        const query = input.value.toLowerCase();
-        filtered = options.filter(o => o.label.toLowerCase().includes(query));
-        filtered.forEach((o, i) => {
-            const div = document.createElement('div');
-            div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-100';
-            div.textContent = o.label;
-            div.onmousedown = (e) => { e.preventDefault(); select(i); };
-            dd.appendChild(div);
-        });
-        dd.classList.toggle('hidden', filtered.length === 0);
-    }
-
-    function highlight(idx) {
-        dd.querySelectorAll('div').forEach(d => d.classList.remove('bg-blue-100'));
-        if (idx >= 0 && idx < filtered.length) {
-            activeIndex = idx;
-            dd.children[idx].classList.add('bg-blue-100');
-            dd.children[idx].scrollIntoView({ block: 'nearest' });
-        }
-    }
-
-    function select(idx) {
-        if (idx >= 0 && idx < filtered.length) {
-            input.value = filtered[idx].label;
-            hidden.value = filtered[idx].value;
-            dd.classList.add('hidden');
-        }
-    }
-
-    input.addEventListener('input', () => { hidden.value = ''; render(); });
-    input.addEventListener('focus', render);
-    input.addEventListener('keydown', (e) => {
-        if (dd.classList.contains('hidden')) return;
-        if (e.key === 'ArrowDown') { e.preventDefault(); highlight(activeIndex + 1 < filtered.length ? activeIndex + 1 : 0); }
-        else if (e.key === 'ArrowUp') { e.preventDefault(); highlight(activeIndex - 1 >= 0 ? activeIndex - 1 : filtered.length - 1); }
-        else if (e.key === 'Enter') { e.preventDefault(); if (activeIndex >= 0) select(activeIndex); }
-        else if (e.key === 'Escape') { dd.classList.add('hidden'); }
-    });
-    input.addEventListener('blur', () => { setTimeout(() => dd.classList.add('hidden'), 150); });
-}
-
-setupAutocompleteEi('eiStatusSearch', 'eiStatusDropdown', eiStatusOptions, 'eiStatusId');
-
 function editItem(id, groupId, supplier, description, priority, value, status) {
-    document.getElementById('editItemRow').classList.remove('hidden');
+    const panel = document.getElementById('editItemPanel');
+    panel.classList.remove('hidden');
     document.getElementById('eiGroupId').value = groupId;
     document.getElementById('eiSupplier').value = supplier;
     document.getElementById('eiDescription').value = description;
     document.getElementById('eiPriority').value = priority;
+    document.getElementById('eiStatus').value = status;
     document.getElementById('eiValue').value = value;
-    // Preenche autocomplete de status
-    const statusLabel = eiStatusOptions.find(o => o.value === status);
-    document.getElementById('eiStatusSearch').value = statusLabel ? statusLabel.label : '';
-    document.getElementById('eiStatusId').value = status;
     const form = document.getElementById('editItemForm');
     form.setAttribute('hx-put', '/previsto/' + id);
     htmx.process(form);
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 </script>
