@@ -19,11 +19,16 @@ from app.mcp.server import mcp
 
 logger = structlog.get_logger()
 
+# MCP app precisa ser criado antes do lifespan
+mcp_app = mcp.http_app(path="/")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("app_started", env=settings.app_env, log_level=settings.log_level)
-    yield
+    # Inicializa o lifespan do fastmcp (obrigatório para StreamableHTTP)
+    async with mcp_app.lifespan(mcp_app):
+        yield
 
 
 app = FastAPI(
@@ -48,7 +53,6 @@ app.include_router(web_router)
 app.include_router(oauth_router)
 
 # MCP server montado em /mcp/v1
-mcp_app = mcp.http_app(path="/")
 app.mount("/mcp/v1", mcp_app)
 
 
