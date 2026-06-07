@@ -1,6 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Realizado — Orçamento de Obra{% endblock %}
 
+{% macro sort_link(label, col, current_sort, current_dir, base_url) %}
+  {%- set next_dir = 'desc' if current_sort == col and current_dir == 'asc' else 'asc' -%}
+  <a href="{{ base_url }}&sort={{ col }}&dir={{ next_dir }}" class="inline-flex items-center gap-1 hover:text-blue-600">
+    {{ label }}
+    {%- if current_sort == col %}{{ ' ↑' if current_dir == 'asc' else ' ↓' }}{% else %} ↕{% endif -%}
+  </a>
+{% endmacro %}
+
 {% block content %}
 <div class="flex items-center justify-between mb-6">
     <h1 class="text-2xl font-bold text-gray-800">Lançamentos Realizados</h1>
@@ -11,7 +19,7 @@
 </div>
 
 <!-- Filters -->
-<form class="bg-white rounded-lg shadow p-4 mb-6 grid grid-cols-2 md:grid-cols-5 gap-4" method="get" action="/realizado">
+<form class="bg-white rounded-lg shadow p-4 mb-6 grid grid-cols-2 md:grid-cols-4 gap-4" method="get" action="/realizado">
     <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Grupo</label>
         <select name="group_id" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
@@ -37,7 +45,17 @@
             <option value="chat" {% if filter_source == 'chat' %}selected{% endif %}>Chat</option>
         </select>
     </div>
-    <div class="flex items-end">
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Fornecedor</label>
+        <input type="text" name="supplier" value="{{ filter_supplier }}" placeholder="Buscar..."
+               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+        <input type="text" name="description" value="{{ filter_description }}" placeholder="Buscar..."
+               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+    </div>
+    <div class="col-span-2 flex items-end">
         <button type="submit" class="bg-gray-600 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-700">Filtrar</button>
     </div>
 </form>
@@ -154,16 +172,23 @@
     </form>
 </div>
 
+{%- set base_url = '/realizado?' -%}
+{%- if filter_group %}{% set base_url = base_url ~ 'group_id=' ~ filter_group ~ '&' %}{% endif -%}
+{%- if filter_start %}{% set base_url = base_url ~ 'start_date=' ~ filter_start ~ '&' %}{% endif -%}
+{%- if filter_end %}{% set base_url = base_url ~ 'end_date=' ~ filter_end ~ '&' %}{% endif -%}
+{%- if filter_source %}{% set base_url = base_url ~ 'source=' ~ filter_source ~ '&' %}{% endif -%}
+{%- if filter_supplier %}{% set base_url = base_url ~ 'supplier=' ~ filter_supplier | urlencode ~ '&' %}{% endif -%}
+{%- if filter_description %}{% set base_url = base_url ~ 'description=' ~ filter_description | urlencode ~ '&' %}{% endif -%}
 <div class="bg-white rounded-lg shadow overflow-x-auto">
     <table class="min-w-full text-sm">
         <thead class="bg-gray-50 border-b">
             <tr>
-                <th class="text-left px-4 py-3 font-medium text-gray-600">Data</th>
-                <th class="text-left px-4 py-3 font-medium text-gray-600">Grupo</th>
-                <th class="text-left px-4 py-3 font-medium text-gray-600">Fornecedor</th>
-                <th class="text-left px-4 py-3 font-medium text-gray-600">Descrição</th>
-                <th class="text-right px-4 py-3 font-medium text-gray-600">Valor</th>
-                <th class="text-center px-4 py-3 font-medium text-gray-600">Pagamento</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">{{ sort_link('Data', 'date', sort, sort_dir, base_url) }}</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">{{ sort_link('Grupo', 'group', sort, sort_dir, base_url) }}</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">{{ sort_link('Fornecedor', 'supplier', sort, sort_dir, base_url) }}</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600">{{ sort_link('Descrição', 'description', sort, sort_dir, base_url) }}</th>
+                <th class="text-right px-4 py-3 font-medium text-gray-600">{{ sort_link('Valor', 'value', sort, sort_dir, base_url) }}</th>
+                <th class="text-center px-4 py-3 font-medium text-gray-600">{{ sort_link('Pagamento', 'payment_method', sort, sort_dir, base_url) }}</th>
                 <th class="text-center px-4 py-3 font-medium text-gray-600">Origem</th>
                 <th class="text-center px-4 py-3 font-medium text-gray-600">Ações</th>
             </tr>
@@ -178,12 +203,12 @@
 {% if total_count > limit %}
 <div class="flex justify-center mt-4 space-x-2">
     {% if offset > 0 %}
-    <a href="?offset={{ offset - limit }}{% if filter_group %}&group_id={{ filter_group }}{% endif %}{% if filter_start %}&start_date={{ filter_start }}{% endif %}{% if filter_end %}&end_date={{ filter_end }}{% endif %}{% if filter_source %}&source={{ filter_source }}{% endif %}"
+    <a href="{{ base_url }}{% if sort %}sort={{ sort }}&dir={{ sort_dir }}&{% endif %}offset={{ offset - limit }}"
        class="px-3 py-2 bg-white rounded-md shadow text-sm text-gray-600 hover:bg-gray-50">Anterior</a>
     {% endif %}
     <span class="px-3 py-2 text-sm text-gray-500">{{ offset + 1 }}–{{ [offset + limit, total_count] | min }} de {{ total_count }}</span>
     {% if offset + limit < total_count %}
-    <a href="?offset={{ offset + limit }}{% if filter_group %}&group_id={{ filter_group }}{% endif %}{% if filter_start %}&start_date={{ filter_start }}{% endif %}{% if filter_end %}&end_date={{ filter_end }}{% endif %}{% if filter_source %}&source={{ filter_source }}{% endif %}"
+    <a href="{{ base_url }}{% if sort %}sort={{ sort }}&dir={{ sort_dir }}&{% endif %}offset={{ offset + limit }}"
        class="px-3 py-2 bg-white rounded-md shadow text-sm text-gray-600 hover:bg-gray-50">Próxima</a>
     {% endif %}
 </div>

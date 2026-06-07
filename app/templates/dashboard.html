@@ -43,24 +43,24 @@
 <!-- By group table -->
 <h2 class="text-lg font-semibold text-gray-700 mb-3">Por Grupo</h2>
 <div class="bg-white rounded-lg shadow overflow-x-auto mb-8">
-    <table class="min-w-full text-sm">
+    <table id="groupsTable" class="min-w-full text-sm">
         <thead class="bg-gray-50 border-b">
             <tr>
-                <th class="text-left px-4 py-3 font-medium text-gray-600">Grupo</th>
-                <th class="text-right px-4 py-3 font-medium text-gray-600">Previsto</th>
-                <th class="text-right px-4 py-3 font-medium text-gray-600">Realizado</th>
-                <th class="text-right px-4 py-3 font-medium text-gray-600">Saldo</th>
-                <th class="text-right px-4 py-3 font-medium text-gray-600">%</th>
+                <th class="text-left px-4 py-3 font-medium text-gray-600 cursor-pointer select-none" onclick="sortGroupsTable(0, 'str')" data-col="0">Grupo <span id="sort-arrow-0"></span></th>
+                <th class="text-right px-4 py-3 font-medium text-gray-600 cursor-pointer select-none" onclick="sortGroupsTable(1, 'num')" data-col="1">Previsto <span id="sort-arrow-1"></span></th>
+                <th class="text-right px-4 py-3 font-medium text-gray-600 cursor-pointer select-none" onclick="sortGroupsTable(2, 'num')" data-col="2">Realizado <span id="sort-arrow-2"></span></th>
+                <th class="text-right px-4 py-3 font-medium text-gray-600 cursor-pointer select-none" onclick="sortGroupsTable(3, 'num')" data-col="3">Saldo <span id="sort-arrow-3"></span></th>
+                <th class="text-right px-4 py-3 font-medium text-gray-600 cursor-pointer select-none" onclick="sortGroupsTable(4, 'num')" data-col="4">% <span id="sort-arrow-4"></span></th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
+        <tbody id="groupsBody" class="divide-y divide-gray-100">
             {% for g in groups %}
             <tr>
-                <td class="px-4 py-2">{{ g.group_name }}</td>
-                <td class="px-4 py-2 text-right">R$ {{ g.planned }}</td>
-                <td class="px-4 py-2 text-right">R$ {{ g.realized }}</td>
-                <td class="px-4 py-2 text-right {% if g.is_over_budget %}text-red-600 font-semibold{% endif %}">R$ {{ g.balance }}</td>
-                <td class="px-4 py-2 text-right">{{ g.percent_display }}%</td>
+                <td class="px-4 py-2" data-val="{{ g.group_name }}">{{ g.group_name }}</td>
+                <td class="px-4 py-2 text-right" data-val="{{ g.planned | replace('.', '') | replace(',', '.') }}">R$ {{ g.planned }}</td>
+                <td class="px-4 py-2 text-right" data-val="{{ g.realized | replace('.', '') | replace(',', '.') }}">R$ {{ g.realized }}</td>
+                <td class="px-4 py-2 text-right {% if g.is_over_budget %}text-red-600 font-semibold{% endif %}" data-val="{{ g.balance | replace('.', '') | replace(',', '.') }}">R$ {{ g.balance }}</td>
+                <td class="px-4 py-2 text-right" data-val="{{ g.percent_display }}">{{ g.percent_display }}%</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -76,6 +76,39 @@
 
 {% block scripts %}
 <script>
+// Client-side sortable table for groups
+let _sortCol = -1;
+let _sortAsc = true;
+
+function sortGroupsTable(col, type) {
+    if (_sortCol === col) {
+        _sortAsc = !_sortAsc;
+    } else {
+        _sortCol = col;
+        _sortAsc = true;
+    }
+    // Update arrows
+    for (let i = 0; i < 5; i++) {
+        const el = document.getElementById('sort-arrow-' + i);
+        if (i === col) el.textContent = _sortAsc ? ' ↑' : ' ↓';
+        else el.textContent = '';
+    }
+    const tbody = document.getElementById('groupsBody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort((a, b) => {
+        const av = a.querySelectorAll('td')[col].dataset.val;
+        const bv = b.querySelectorAll('td')[col].dataset.val;
+        let cmp;
+        if (type === 'num') {
+            cmp = parseFloat(av.replace(/[^\d.\-]/g, '')) - parseFloat(bv.replace(/[^\d.\-]/g, ''));
+        } else {
+            cmp = av.localeCompare(bv, 'pt-BR');
+        }
+        return _sortAsc ? cmp : -cmp;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+}
+
 const labels = {{ chart_labels | tojson }};
 const planned = {{ chart_planned | tojson }};
 const realized = {{ chart_realized | tojson }};

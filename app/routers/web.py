@@ -287,6 +287,9 @@ async def _budget_items_context(
     filter_group: str | None = None,
     filter_priority: str | None = None,
     filter_status: str | None = None,
+    filter_description: str | None = None,
+    sort: str | None = None,
+    sort_dir: str = "asc",
 ) -> dict:
     groups = await _get_all_groups(db, include_inactive=False)
     group_map = {g.id: g.name for g in groups}
@@ -298,7 +301,25 @@ async def _budget_items_context(
         stmt = stmt.where(BudgetItem.priority == filter_priority)
     if filter_status:
         stmt = stmt.where(BudgetItem.status == filter_status)
-    stmt = stmt.order_by(Group.sort_order.nullslast(), Group.name, BudgetItem.created_at)
+    if filter_description:
+        stmt = stmt.where(BudgetItem.description.ilike(f"%{filter_description}%"))
+
+    # Sorting
+    _sort_col_map = {
+        "group": Group.name,
+        "supplier": BudgetItem.supplier,
+        "description": BudgetItem.description,
+        "priority": BudgetItem.priority,
+        "status": BudgetItem.status,
+        "value": BudgetItem.planned_value,
+    }
+    sort_col = _sort_col_map.get(sort) if sort else None
+    if sort_col is not None:
+        order_expr = sort_col.desc() if sort_dir == "desc" else sort_col.asc()
+        stmt = stmt.order_by(order_expr)
+    else:
+        stmt = stmt.order_by(Group.sort_order.nullslast(), Group.name, BudgetItem.created_at)
+
     rows = list((await db.execute(stmt)).scalars().all())
 
     total = sum(Decimal(str(r.planned_value)) for r in rows)
@@ -322,6 +343,9 @@ async def _budget_items_context(
         "filter_group": filter_group or "",
         "filter_priority": filter_priority or "",
         "filter_status": filter_status or "",
+        "filter_description": filter_description or "",
+        "sort": sort or "",
+        "sort_dir": sort_dir,
     }
 
 
@@ -331,10 +355,13 @@ async def previsto_page(
     group_id: str | None = Query(None),
     priority: str | None = Query(None),
     status: str | None = Query(None),
+    description: str | None = Query(None),
+    sort: str | None = Query(None),
+    dir: str = Query("asc"),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     _check_auth(request)
-    ctx = await _budget_items_context(db, group_id, priority, status)
+    ctx = await _budget_items_context(db, group_id, priority, status, description, sort, dir)
     return templates.TemplateResponse(request, "previsto.html", {
         "active_page": "previsto",
         **ctx,
@@ -424,6 +451,10 @@ async def _transactions_context(
     filter_start: str | None = None,
     filter_end: str | None = None,
     filter_source: str | None = None,
+    filter_supplier: str | None = None,
+    filter_description: str | None = None,
+    sort: str | None = None,
+    sort_dir: str = "desc",
     offset: int = 0,
     limit: int = 50,
 ) -> dict:
@@ -447,10 +478,31 @@ async def _transactions_context(
     if filter_source:
         stmt = stmt.where(Transaction.source == filter_source)
         count_stmt = count_stmt.where(Transaction.source == filter_source)
+    if filter_supplier:
+        stmt = stmt.where(Transaction.supplier.ilike(f"%{filter_supplier}%"))
+        count_stmt = count_stmt.where(Transaction.supplier.ilike(f"%{filter_supplier}%"))
+    if filter_description:
+        stmt = stmt.where(Transaction.description.ilike(f"%{filter_description}%"))
+        count_stmt = count_stmt.where(Transaction.description.ilike(f"%{filter_description}%"))
 
     total_count = (await db.execute(count_stmt)).scalar() or 0
 
-    stmt = stmt.order_by(Transaction.transaction_date.desc(), Transaction.created_at.desc())
+    # Sorting
+    _sort_col_map = {
+        "date": Transaction.transaction_date,
+        "group": Group.name,
+        "supplier": Transaction.supplier,
+        "description": Transaction.description,
+        "value": Transaction.value,
+        "payment_method": Transaction.payment_method,
+    }
+    sort_col = _sort_col_map.get(sort) if sort else None
+    if sort_col is not None:
+        order_expr = sort_col.asc() if sort_dir == "asc" else sort_col.desc()
+        stmt = stmt.order_by(order_expr)
+    else:
+        stmt = stmt.order_by(Transaction.transaction_date.desc(), Transaction.created_at.desc())
+
     stmt = stmt.offset(offset).limit(limit)
     rows = list((await db.execute(stmt)).scalars().all())
 
@@ -481,6 +533,10 @@ async def _transactions_context(
         "filter_start": filter_start or "",
         "filter_end": filter_end or "",
         "filter_source": filter_source or "",
+        "filter_supplier": filter_supplier or "",
+        "filter_description": filter_description or "",
+        "sort": sort or "",
+        "sort_dir": sort_dir,
     }
 
 
@@ -491,11 +547,15 @@ async def realizado_page(
     start_date: str | None = Query(None),
     end_date: str | None = Query(None),
     source: str | None = Query(None),
+    supplier: str | None = Query(None),
+    description: str | None = Query(None),
+    sort: str | None = Query(None),
+    dir: str = Query("desc"),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     _check_auth(request)
-    ctx = await _transactions_context(db, group_id, start_date, end_date, source, offset)
+    ctx = await _transactions_context(db, group_id, start_date, end_date, source, supplier, description, sort, dir, offset)
     return templates.TemplateResponse(request, "realizado.html", {
         "active_page": "realizado",
         "today": date.today().isoformat(),
