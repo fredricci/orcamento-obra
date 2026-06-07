@@ -39,7 +39,9 @@ mcp = fastmcp.FastMCP("Orçamento de Obra")
 
 @mcp.tool()
 async def list_groups() -> list[dict]:
-    """Retorna todos os grupos ativos com id e name."""
+    """Retorna todos os grupos ativos com id, name e description.
+    Use a description para classificar corretamente os itens de uma nota fiscal.
+    """
     _, factory = _get_engine()
     async with factory() as db:
         stmt = (
@@ -49,7 +51,7 @@ async def list_groups() -> list[dict]:
         )
         result = await db.execute(stmt)
         groups = result.scalars().all()
-        return [{"id": str(g.id), "name": g.name} for g in groups]
+        return [{"id": str(g.id), "name": g.name, "description": g.description or ""} for g in groups]
 
 
 @mcp.tool()

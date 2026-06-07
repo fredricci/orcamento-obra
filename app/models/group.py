@@ -1,6 +1,6 @@
 """Model do grupo de despesa."""
 
-from sqlalchemy import Boolean, Integer, String
+from sqlalchemy import Boolean, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -12,6 +12,7 @@ class Group(Base):
     __tablename__ = "groups"
 
     name: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     sort_order: Mapped[int | None] = mapped_column(Integer, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

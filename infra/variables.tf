@@ -23,9 +23,9 @@ variable "my_ip" {
 variable "ami_id" {
   description = "AMI ID for Ubuntu 22.04 ARM64 in sa-east-1"
   type        = string
-  # Ubuntu 22.04 LTS ARM64 (Jammy) in sa-east-1 — ami-0cbe887a8e3d99f22
+  # Ubuntu 22.04 LTS ARM64 (Jammy) in sa-east-1 — atualizado em 2026-06-07
   # Verify latest at: https://cloud-images.ubuntu.com/locator/ec2/
-  default = "ami-0cbe887a8e3d99f22"
+  default = "ami-09bcb25ad91ede56e"
 }
 
 variable "instance_type" {

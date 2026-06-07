@@ -1,17 +1,15 @@
 {% for g in groups %}
 <tr id="group-{{ g.id }}">
-    <td class="px-4 py-2">
-        <span class="group-name">{{ g.name }}</span>
-    </td>
-    <td class="px-4 py-2 text-center">{{ g.sort_order if g.sort_order is not none else '-' }}</td>
+    <td class="px-4 py-2 font-medium">{{ g.name }}</td>
+    <td class="px-4 py-2 text-gray-500 text-xs">{{ g.description or '—' }}</td>
     <td class="px-4 py-2 text-center">
         <button hx-put="/grupos/{{ g.id }}/toggle" hx-target="#groupsTable" hx-swap="innerHTML"
                 class="px-2 py-1 rounded text-xs font-medium {% if g.active %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
             {{ 'Ativo' if g.active else 'Inativo' }}
         </button>
     </td>
-    <td class="px-4 py-2 text-center">
-        <button onclick="editGroup('{{ g.id }}', '{{ g.name }}', '{{ g.sort_order if g.sort_order is not none else '' }}')"
+    <td class="px-4 py-2 text-center whitespace-nowrap">
+        <button onclick="editGroup('{{ g.id }}', '{{ g.name }}', '{{ (g.description or '') | replace("'", "\\'") }}')"
                 class="text-blue-600 hover:underline text-xs mr-2">Editar</button>
         <button hx-delete="/grupos/{{ g.id }}" hx-target="#groupsTable" hx-swap="innerHTML"
                 hx-confirm="Excluir o grupo '{{ g.name }}'? Só funciona se não tiver itens previstos ou lançamentos vinculados."
@@ -20,14 +18,22 @@
 </tr>
 {% endfor %}
 
-<!-- Inline edit modal -->
+<!-- Inline edit -->
 <tr id="editRow" class="hidden bg-blue-50">
     <td colspan="4" class="px-4 py-3">
         <form id="editGroupForm" hx-target="#groupsTable" hx-swap="innerHTML">
             <input type="hidden" name="group_id" id="editGroupId">
-            <div class="flex items-center gap-3">
-                <input type="text" name="name" id="editGroupName" required maxlength="80" class="border border-gray-300 rounded-md px-3 py-2 text-sm flex-1">
-                <input type="number" name="sort_order" id="editGroupOrder" class="border border-gray-300 rounded-md px-3 py-2 text-sm w-20">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Nome</label>
+                    <input type="text" name="name" id="editGroupName" required maxlength="80" class="border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Descrição</label>
+                    <input type="text" name="description" id="editGroupDescription" class="border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
+                </div>
+            </div>
+            <div class="mt-2 flex gap-2">
                 <button type="submit" class="bg-blue-600 text-white px-3 py-2 rounded-md text-xs hover:bg-blue-700">Salvar</button>
                 <button type="button" onclick="document.getElementById('editRow').classList.add('hidden')" class="text-gray-500 text-xs hover:underline">Cancelar</button>
             </div>
@@ -36,12 +42,12 @@
 </tr>
 
 <script>
-function editGroup(id, name, order) {
+function editGroup(id, name, description) {
     const row = document.getElementById('editRow');
     row.classList.remove('hidden');
     document.getElementById('editGroupId').value = id;
     document.getElementById('editGroupName').value = name;
-    document.getElementById('editGroupOrder').value = order;
+    document.getElementById('editGroupDescription').value = description;
     const form = document.getElementById('editGroupForm');
     form.setAttribute('hx-put', '/grupos/' + id);
     htmx.process(form);

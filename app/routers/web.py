@@ -206,11 +206,11 @@ async def grupos_page(request: Request, db: AsyncSession = Depends(get_db)) -> R
 async def create_group_web(
     request: Request,
     name: str = Form(...),
-    sort_order: int | None = Form(None),
+    description: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     _check_auth(request)
-    group = Group(name=name, sort_order=sort_order, active=True)
+    group = Group(name=name, description=description or None, active=True)
     db.add(group)
     await db.commit()
     groups = await _get_all_groups(db)
@@ -224,7 +224,7 @@ async def update_group_web(
     request: Request,
     group_id: uuid.UUID,
     name: str = Form(...),
-    sort_order: int | None = Form(None),
+    description: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     _check_auth(request)
@@ -232,7 +232,7 @@ async def update_group_web(
     if not group:
         raise HTTPException(status_code=404, detail="Grupo não encontrado")
     group.name = name
-    group.sort_order = sort_order
+    group.description = description or None
     await db.commit()
     groups = await _get_all_groups(db)
     return templates.TemplateResponse(request, "partials/groups_rows.html", {
