@@ -33,6 +33,18 @@ async def oauth_metadata() -> JSONResponse:
     })
 
 
+@router.get("/.well-known/oauth-protected-resource")
+@router.get("/.well-known/oauth-protected-resource/{path:path}")
+async def oauth_protected_resource(path: str = "") -> JSONResponse:
+    """RFC 8707 — informa qual authorization server protege este recurso."""
+    base = settings.app_base_url
+    return JSONResponse({
+        "resource": f"{base}/mcp/v1",
+        "authorization_servers": [base],
+        "bearer_methods_supported": ["header"],
+    })
+
+
 # ---------------------------------------------------------------------------
 # Dynamic Client Registration (RFC 7591)
 # ---------------------------------------------------------------------------

@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.middleware import APIKeyMiddleware
+from app.middleware import APIKeyMiddleware, MCPPathMiddleware
 from app.routers.groups import router as groups_router
 from app.routers.budget_items import router as budget_items_router
 from app.routers.transactions import router as transactions_router
@@ -35,8 +35,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# API Key middleware (protege /api/v1/*)
+# Middlewares (ordem importa: último adicionado = primeiro executado)
 app.add_middleware(APIKeyMiddleware)
+app.add_middleware(MCPPathMiddleware)
 
 # Routers
 app.include_router(groups_router)
