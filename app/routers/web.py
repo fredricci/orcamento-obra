@@ -458,11 +458,14 @@ async def _transactions_context(
     for r in rows:
         transactions.append({
             "id": str(r.id),
+            "group_id": str(r.group_id),
             "date_fmt": r.transaction_date.strftime("%d/%m/%Y") if r.transaction_date else "-",
+            "date_iso": r.transaction_date.isoformat() if r.transaction_date else "",
             "group_name": group_map.get(r.group_id, "?"),
             "supplier": r.supplier,
             "description": r.description,
             "value_fmt": _fmt(r.value),
+            "value_raw": str(r.value),
             "payment_method": r.payment_method.value if r.payment_method else None,
             "source": r.source.value if r.source else None,
             "input_type": r.input_type.value if r.input_type else None,
@@ -524,6 +527,35 @@ async def create_transaction_web(
         source=TransactionSource.manual,
     )
     db.add(txn)
+    await db.commit()
+    ctx = await _transactions_context(db)
+    return templates.TemplateResponse(request, "partials/transactions_rows.html", {
+        **ctx,
+    })
+
+
+@router.put("/realizado/{txn_id}", response_class=HTMLResponse)
+async def update_transaction_web(
+    request: Request,
+    txn_id: uuid.UUID,
+    group_id: uuid.UUID = Form(...),
+    transaction_date: date = Form(...),
+    supplier: str | None = Form(None),
+    value: float = Form(...),
+    payment_method: str = Form(...),
+    description: str | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    _check_auth(request)
+    txn = await db.get(Transaction, txn_id)
+    if not txn:
+        raise HTTPException(status_code=404, detail="Lançamento não encontrado")
+    txn.group_id = group_id
+    txn.transaction_date = transaction_date
+    txn.supplier = supplier or ""
+    txn.description = description or None
+    txn.value = value
+    txn.payment_method = PaymentMethod(payment_method)
     await db.commit()
     ctx = await _transactions_context(db)
     return templates.TemplateResponse(request, "partials/transactions_rows.html", {

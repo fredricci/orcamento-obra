@@ -1,20 +1,93 @@
 {% for txn in transactions %}
 <tr id="txn-{{ txn.id }}">
-    <td class="px-4 py-2">{{ txn.date_fmt }}</td>
-    <td class="px-4 py-2">{{ txn.group_name }}</td>
-    <td class="px-4 py-2">{{ txn.supplier }}</td>
-    <td class="px-4 py-2">{{ txn.description or '-' }}</td>
-    <td class="px-4 py-2 text-right">R$ {{ txn.value_fmt }}</td>
+    <td class="px-4 py-2 text-sm">{{ txn.date_fmt }}</td>
+    <td class="px-4 py-2 text-sm">{{ txn.group_name }}</td>
+    <td class="px-4 py-2 text-sm">{{ txn.supplier or '-' }}</td>
+    <td class="px-4 py-2 text-sm">{{ txn.description or '-' }}</td>
+    <td class="px-4 py-2 text-right text-sm">R$ {{ txn.value_fmt }}</td>
     <td class="px-4 py-2 text-center">
         <span class="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">{{ txn.payment_method or '-' }}</span>
     </td>
     <td class="px-4 py-2 text-center">
         <span class="px-2 py-1 rounded text-xs {% if txn.source == 'chat' %}bg-purple-100 text-purple-700{% else %}bg-gray-100 text-gray-700{% endif %}">{{ txn.source or '-' }}</span>
     </td>
-    <td class="px-4 py-2 text-center">
+    <td class="px-4 py-2 text-center whitespace-nowrap">
+        <button onclick="editTxn('{{ txn.id }}', '{{ txn.group_id }}', '{{ txn.date_iso }}', '{{ (txn.supplier or '') }}', '{{ (txn.description or '') }}', '{{ txn.value_raw }}', '{{ txn.payment_method or 'pix' }}')"
+                class="text-blue-600 hover:underline text-xs mr-2">Editar</button>
         <button hx-delete="/realizado/{{ txn.id }}" hx-target="#txnBody" hx-swap="innerHTML"
                 hx-confirm="Tem certeza que deseja excluir este lançamento?"
                 class="text-red-600 hover:underline text-xs">Excluir</button>
     </td>
 </tr>
 {% endfor %}
+
+<!-- Inline edit row -->
+<tr id="editTxnRow" class="hidden bg-blue-50">
+    <td colspan="8" class="px-4 py-3">
+        <form id="editTxnForm" hx-target="#txnBody" hx-swap="innerHTML">
+            <div class="grid grid-cols-2 md:grid-cols-7 gap-3 items-end">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Data</label>
+                    <input type="date" name="transaction_date" id="etDate" required
+                           class="border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Grupo</label>
+                    <select name="group_id" id="etGroupId" required class="border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
+                        {% for g in groups %}
+                        <option value="{{ g.id }}">{{ g.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Fornecedor</label>
+                    <input type="text" name="supplier" id="etSupplier" maxlength="120"
+                           class="border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Descrição</label>
+                    <input type="text" name="description" id="etDescription"
+                           class="border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Valor (R$)</label>
+                    <input type="number" name="value" id="etValue" step="0.01" min="0.01" required
+                           class="border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Pagamento</label>
+                    <select name="payment_method" id="etPayment" required class="border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
+                        <option value="pix">PIX</option>
+                        <option value="credito_avista">Crédito à Vista</option>
+                        <option value="credito_parcelado">Crédito Parcelado</option>
+                        <option value="debito">Débito</option>
+                        <option value="boleto">Boleto</option>
+                        <option value="transferencia">Transferência</option>
+                        <option value="dinheiro">Dinheiro</option>
+                    </select>
+                </div>
+                <div class="flex gap-2 items-end">
+                    <button type="submit" class="bg-blue-600 text-white px-3 py-2 rounded-md text-xs hover:bg-blue-700">Salvar</button>
+                    <button type="button" onclick="document.getElementById('editTxnRow').classList.add('hidden')"
+                            class="text-gray-500 text-xs hover:underline">Cancelar</button>
+                </div>
+            </div>
+        </form>
+    </td>
+</tr>
+
+<script>
+function editTxn(id, groupId, date, supplier, description, value, paymentMethod) {
+    document.getElementById('editTxnRow').classList.remove('hidden');
+    document.getElementById('etDate').value = date;
+    document.getElementById('etGroupId').value = groupId;
+    document.getElementById('etSupplier').value = supplier;
+    document.getElementById('etDescription').value = description;
+    document.getElementById('etValue').value = value;
+    document.getElementById('etPayment').value = paymentMethod;
+    const form = document.getElementById('editTxnForm');
+    form.setAttribute('hx-put', '/realizado/' + id);
+    htmx.process(form);
+    document.getElementById('editTxnRow').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+</script>
